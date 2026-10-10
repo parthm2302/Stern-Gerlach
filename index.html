@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stern–Gerlach Experiment Simulator</title>
+<meta name="description" content="Interactive simulation of the Stern–Gerlach experiment: choose the number of particles, the magnetic-field axis and the initial spin state.">
+<style>
+:root{--bg:#0b1020;--panel:#141b33;--panel2:#1b2447;--text:#e8ecf8;--muted:#9aa6c8;--accent:#6ea8ff;--line:#2a3566;--good:#7bd88f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:1050px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.7rem;margin:.2em 0 .1em}
+h2{font-size:1.15rem;margin:0 0 .6em}
+.sub{color:var(--muted);margin:0 0 18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+label.l{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+input[type=number],select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:1rem}
+.chips{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.chip{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:3px 10px;font-size:.8rem;cursor:pointer}
+.chip:hover{color:var(--text)}
+.radios{display:flex;gap:8px}
+.radios label{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:8px 0;cursor:pointer;font-weight:600}
+.radios input{display:none}
+.radios input:checked+span{color:#fff}
+.radios label:has(input:checked){background:var(--accent);color:#06102a;border-color:var(--accent)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+button{border:0;border-radius:9px;padding:10px 18px;font-size:1rem;font-weight:600;cursor:pointer}
+.primary{background:var(--accent);color:#06102a}
+.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.check{color:var(--muted);font-size:.9rem;display:flex;gap:6px;align-items:center}
+canvas{width:100%;height:auto;display:block;border-radius:12px;background:#070b18;border:1px solid var(--line)}
+.status{color:var(--muted);font-size:.9rem;margin-top:8px;min-height:1.3em}
+.err{color:#ff8a8a}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:.82rem}
+.bar{height:10px;border-radius:5px;min-width:2px}
+.barbox{background:var(--panel2);border-radius:5px;width:100%;min-width:80px}
+.note{background:var(--panel2);border-left:3px solid var(--accent);padding:10px 12px;border-radius:6px;margin-top:12px;font-size:.95rem}
+.hidden{display:none}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--accent);font-weight:600}
+code,.f{background:var(--panel2);padding:1px 6px;border-radius:5px}
+.f{display:block;padding:8px 12px;margin:8px 0;overflow-x:auto}
+.scroll{overflow-x:auto}
+footer{color:var(--muted);font-size:.85rem;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Stern–Gerlach Experiment Simulator</h1>
+  <p class="sub">Fire a beam of spin-carrying particles through an inhomogeneous magnetic field and watch the beam split into discrete spots, something classical physics cannot explain.</p>
+
+  <div class="panel">
+    <h2>1. Set up the experiment</h2>
+    <div class="grid">
+      <div>
+        <label class="l" for="n">Number of particles fired</label>
+        <input type="number" id="n" min="1" max="1000000" step="1" value="1000">
+        <div class="chips">
+          <span class="chip" data-n="10">10</span><span class="chip" data-n="100">100</span><span class="chip" data-n="1000">1,000</span><span class="chip" data-n="10000">10,000</span><span class="chip" data-n="100000">100,000</span>
+        </div>
+      </div>
+      <div>
+        <label class="l">Axis of the magnetic field (measurement axis)</label>
+        <div class="radios">
+          <label><input type="radio" name="axis" value="x"><span>x</span></label>
+          <label><input type="radio" name="axis" value="y"><span>y</span></label>
+          <label><input type="radio" name="axis" value="z" checked><span>z</span></label>
+        </div>
+      </div>
+      <div>
+        <label class="l" for="state">Initial spin state of the particles</label>
+        <select id="state">
+          <option value="+z">Spin up along +z</option>
+          <option value="-z">Spin down along −z</option>
+          <option value="+x">Spin along +x</option>
+          <option value="-x">Spin along −x</option>
+          <option value="+y">Spin along +y</option>
+          <option value="-y">Spin along −y</option>
+          <option value="unpol">Unpolarised (random)</option>
+          <option value="custom">Custom direction (θ, φ)</option>
+        </select>
+        <div id="custom" class="row hidden" style="margin-top:8px">
+          <input type="number" id="theta" value="60" min="0" max="180" step="1" style="width:46%" title="θ in degrees (from +z)">
+          <input type="number" id="phi" value="0" min="0" max="360" step="1" style="width:46%" title="φ in degrees (from +x towards +y)">
+        </div>
+        <div class="status" id="customhint" style="display:none">θ from +z axis, φ from +x towards +y (degrees)</div>
+      </div>
+      <div>
+        <label class="l" for="spin">Particle spin quantum number s</label>
+        <select id="spin">
+          <option value="0.5">s = 1/2 (electron, silver atom)</option>
+          <option value="1">s = 1</option>
+          <option value="1.5">s = 3/2</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <button class="primary" id="run">▶ Run experiment</button>
+      <button class="ghost" id="skip" disabled>Skip animation</button>
+      <button class="ghost" id="reset">Reset</button>
+      <select id="speed" style="width:auto" title="Animation speed">
+        <option value="0.6">Slow</option><option value="1" selected>Normal</option><option value="2.5">Fast</option>
+      </select>
+      <label class="check"><input type="checkbox" id="classical"> Show classical prediction</label>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2. The apparatus</h2>
+    <canvas id="cv" width="900" height="380"></canvas>
+    <div class="status" id="progress"></div>
+  </div>
+
+  <div class="panel hidden" id="results">
+    <h2>3. Results</h2>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Spin component m (in ħ)</th><th>Predicted %</th><th>Predicted count</th><th>Observed count</th><th>Observed %</th><th style="width:25%">Distribution</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    </div>
+    <div class="note" id="explain"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Theory</h2>
+    <p>A particle with magnetic moment <b>μ</b> in a magnetic field with a gradient feels a force along the field axis. For a field along <i>z</i>:</p>
+    <span class="f">F<sub>z</sub> = μ<sub>z</sub> · ∂B<sub>z</sub>/∂z</span>
+    <p>Classically μ<sub>z</sub> could take any value, so the beam would smear into a continuous band. Stern and Gerlach (1922) saw instead <b>discrete spots</b>: the component of spin along the measurement axis is quantised, S<sub>axis</sub> = mħ with m = −s, −s+1, …, +s, giving 2s+1 beams (two for s = 1/2).</p>
+    <p>If the incoming spin points along a direction making angle γ with the measurement axis, the probability of each outcome follows from the Born rule. For s = 1/2:</p>
+    <span class="f">P(up) = cos²(γ/2) = (1 + cos γ)/2 &nbsp;&nbsp;&nbsp; P(down) = sin²(γ/2) = (1 − cos γ)/2</span>
+    <p>For higher spin (a spin pointing along a definite direction, a "spin-coherent state") the outcomes follow a binomial distribution, P(m) = C(2s, s+m) · p<sup>s+m</sup> (1−p)<sup>s−m</sup> with p = cos²(γ/2). An unpolarised beam gives all 2s+1 outcomes with equal probability.</p>
+    <details><summary>Things to try</summary>
+      <ul>
+        <li>Spin +z measured along z: 100% in the top beam. Same spin measured along x: 50/50, i.e. measuring along x "forgets" the z information.</li>
+        <li>Increase N and watch the observed % converge to the prediction (fluctuations scale like 1/√N).</li>
+        <li>Set a custom θ = 60°, measure along z: P(up) = cos²(30°) = 75%.</li>
+        <li>Switch on "Show classical prediction" to compare with the continuous smear expected from classical physics.</li>
+      </ul>
+    </details>
+  </div>
+  <footer>Simulation: each particle's outcome is drawn at random from the quantum-mechanical probabilities. The apparatus is drawn with the deflection axis vertical for every field axis; the label shows which spin axis is being measured.</footer>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d');
+const W=900,H=380,CY=190,X0=70,XM0=280,XM1=460,XS=820,D=100;
+const L=XM1-XM0, FACTOR=1+2*(XS-XM1)/L;
+const dpr=Math.min(window.devicePixelRatio||1,2);
+cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+
+const AXES={x:[1,0,0],y:[0,1,0],z:[0,0,1]};
+const STATES={'+z':[0,0,1],'-z':[0,0,-1],'+x':[1,0,0],'-x':[-1,0,0],'+y':[0,1,0],'-y':[0,-1,0]};
+
+let parts=[],dots=[],raf=null,t0=0,current=null,landed=0,running=false;
+
+function fmtM(m){
+  if(Number.isInteger(m)) return (m>0?'+':m<0?'−':'')+Math.abs(m);
+  const n=Math.abs(2*m);return (m>0?'+':'−')+n+'/2';
+}
+function C(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r}
+function gauss(){let u=0,v=0;while(!u)u=Math.random();v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function colorFor(k,s){const nb=2*s+1,idx=nb-1-k;return `hsl(${nb===1?0:Math.round(4+(idx/(nb-1))*216)},85%,62%)`}
+function offsetFor(k,s){return ((k-s)/s)*D}   // +ve = up
+
+function readParams(){
+  const N=parseInt($('n').value,10);
+  if(!Number.isFinite(N)||N<1||N>1000000) return {err:'Enter a whole number of particles between 1 and 1,000,000.'};
+  const axis=document.querySelector('input[name=axis]:checked').value;
+  const s=parseFloat($('spin').value);
+  const st=$('state').value;
+  let n=null;
+  if(st==='custom'){
+    const th=parseFloat($('theta').value)*Math.PI/180, ph=parseFloat($('phi').value)*Math.PI/180;
+    if(!Number.isFinite(th)||!Number.isFinite(ph)) return {err:'Enter valid angles for θ and φ.'};
+    n=[Math.sin(th)*Math.cos(ph),Math.sin(th)*Math.sin(ph),Math.cos(th)];
+  } else if(st!=='unpol') n=STATES[st];
+  let p=null,cosg=null;
+  if(n){const a=AXES[axis];cosg=Math.max(-1,Math.min(1,n[0]*a[0]+n[1]*a[1]+n[2]*a[2]));p=(1+cosg)/2}
+  return {N,axis,s,st,p,cosg};
+}
+function expected(P){
+  const nb=2*P.s+1,out=[];
+  for(let k=0;k<nb;k++) out.push(P.p===null?1/nb:C(2*P.s,k)*Math.pow(P.p,k)*Math.pow(1-P.p,2*P.s-k));
+  return out;
+}
+function simulate(P){
+  const nb=2*P.s+1,trials=2*P.s,counts=new Array(nb).fill(0),nAnim=Math.min(P.N,200),anim=[];
+  for(let i=0;i<P.N;i++){
+    let k;
+    if(P.p===null) k=Math.floor(Math.random()*nb);
+    else{k=0;for(let j=0;j<trials;j++) if(Math.random()<P.p)k++}
+    counts[k]++;
+    if(i<nAnim) anim.push(k);
+  }
+  return {counts,anim};
+}
+
+/* ---------- drawing ---------- */
+function drawScene(P){
+  ctx.clearRect(0,0,W,H);
+  const s=P?P.s:0.5, axis=P?P.axis:$('spin')&&document.querySelector('input[name=axis]:checked').value;
+  // source
+  ctx.fillStyle='#2a3566';ctx.fillRect(20,CY-30,50,60);
+  ctx.fillStyle='#e8ecf8';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText('Source',45,CY+48);
+  // slits
+  ctx.fillStyle='#3a4580';ctx.fillRect(140,CY-60,8,50);ctx.fillRect(140,CY+10,8,50);
+  // beam guide
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(X0,CY);ctx.lineTo(XM0,CY);ctx.stroke();ctx.setLineDash([]);
+  // magnet: top (N) knife-edge, bottom (S) groove
+  ctx.fillStyle='#c0392b';ctx.beginPath();
+  ctx.moveTo(XM0,CY-110);ctx.lineTo(XM1,CY-110);ctx.lineTo(XM1,CY-45);ctx.lineTo(XM0+L/2+22,CY-45);ctx.lineTo(XM0+L/2,CY-14);ctx.lineTo(XM0+L/2-22,CY-45);ctx.lineTo(XM0,CY-45);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#2e6fd0';ctx.beginPath();
+  ctx.moveTo(XM0,CY+110);ctx.lineTo(XM1,CY+110);ctx.lineTo(XM1,CY+34);ctx.lineTo(XM0+L/2+30,CY+34);ctx.quadraticCurveTo(XM0+L/2,CY+14,XM0+L/2-30,CY+34);ctx.lineTo(XM0,CY+34);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 16px system-ui';ctx.fillText('N',XM0+30,CY-70);ctx.fillText('S',XM0+30,CY+80);
+  ctx.fillStyle='#9aa6c8';ctx.font='12px system-ui';
+  ctx.fillText('Magnet: B ∥ '+axis+', gradient ∂B/∂'+axis,(XM0+XM1)/2,CY+130);
+  // screen
+  ctx.fillStyle='#8892b8';ctx.fillRect(XS,CY-D-40,6,2*D+80);
+  ctx.fillStyle='#9aa6c8';ctx.textAlign='center';ctx.fillText('Detector',XS+3,CY+D+60);
+  // classical band
+  if($('classical').checked){
+    const g=ctx.createLinearGradient(0,CY-D,0,CY+D);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(.5,'rgba(255,255,255,.30)');g.addColorStop(1,'rgba(255,255,255,.04)');
+    ctx.fillStyle=g;ctx.fillRect(XS-14,CY-D,12,2*D);
+    ctx.fillStyle='#cfd6ee';ctx.textAlign='right';ctx.font='11px system-ui';ctx.fillText('classical: continuous smear',XS-20,CY-D-8);
+  }
+  // beam labels
+  ctx.textAlign='left';ctx.font='bold 12px system-ui';
+  for(let k=0;k<2*s+1;k++){
+    ctx.fillStyle=colorFor(k,s);
+    ctx.fillText('m = '+fmtM(k-s),XS+14,CY-offsetFor(k,s)+4);
+  }
+  ctx.textAlign='left';
+}
+function yAt(x,p){
+  const off=offsetFor(p.k,current.s),offMag=off/FACTOR;
+  let y;
+  if(x<=XM0) y=0;
+  else if(x<=XM1){const u=(x-XM0)/L;y=offMag*u*u}
+  else y=offMag+2*offMag/L*(x-XM1);
+  const spread=x>XM0?(x-XM0)/(XS-XM0):0;
+  return CY-y+p.jy*spread;
+}
+function frame(now){
+  if(!current) return;
+  const sp=parseFloat($('speed').value),T=(now-t0)*sp,v=0.28;
+  drawScene(current.P);
+  for(const d of dots){ctx.fillStyle=d.c;ctx.globalAlpha=.8;ctx.beginPath();ctx.arc(d.x,d.y,2.4,0,7);ctx.fill();ctx.globalAlpha=1}
+  let alive=0;
+  for(const p of parts){
+    if(p.done) continue;
+    const x=X0+(T-p.delay)*v;
+    if(x<X0){alive++;continue}
+    if(x>=XS){land(p);continue}
+    alive++;
+    const y=yAt(x,p),col=x>XM0?colorFor(p.k,current.s):'#ffffff';
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(x,y,3.2,0,7);ctx.fill();ctx.shadowBlur=0;
+  }
+  $('progress').textContent='Particles detected (animated sample): '+landed+' / '+parts.length+(current.P.N>parts.length?'  (animation shows '+parts.length+' of '+current.P.N+'; counts below use all of them)':'');
+  if(alive>0) raf=requestAnimationFrame(frame); else finish();
+}
+function land(p){
+  p.done=true;landed++;
+  dots.push({x:XS+3+gauss()*3,y:yAt(XS,p),c:colorFor(p.k,current.s)});
+}
+
+/* ---------- control ---------- */
+function startRun(){
+  const P=readParams();
+  const st=$('status');
+  if(P.err){st.textContent=P.err;st.className='status err';return}
+  st.className='status';st.textContent='';
+  stopAnim();
+  const sim=simulate(P);
+  current={P,s:P.s,sim};
+  parts=sim.anim.map((k,i)=>({k,delay:i*35,done:false,jy:gauss()*4}));
+  dots=[];landed=0;running=true;
+  $('results').classList.add('hidden');
+  $('run').disabled=true;$('skip').disabled=false;
+  t0=performance.now();
+  raf=requestAnimationFrame(frame);
+}
+function stopAnim(){if(raf)cancelAnimationFrame(raf);raf=null;running=false}
+function skip(){
+  if(!current) return;
+  stopAnim();
+  for(const p of parts) if(!p.done) land(p);
+  drawScene(current.P);
+  for(const d of dots){ctx.fillStyle=d.c;ctx.globalAlpha=.8;ctx.beginPath();ctx.arc(d.x,d.y,2.4,0,7);ctx.fill();ctx.globalAlpha=1}
+  finish();
+}
+function finish(){
+  stopAnim();
+  $('run').disabled=false;$('skip').disabled=true;
+  if(!current) return;
+  const {P,sim}=current,exp=expected(P),nb=2*P.s+1;
+  let rows='';
+  for(let k=nb-1;k>=0;k--){
+    const obs=sim.counts[k],op=100*obs/P.N,ep=100*exp[k];
+    rows+=`<tr><td><b style="color:${colorFor(k,P.s)}">${fmtM(k-P.s)}</b></td><td>${ep.toFixed(2)}%</td><td>${(exp[k]*P.N).toFixed(1)}</td><td>${obs.toLocaleString()}</td><td>${op.toFixed(2)}%</td><td><div class="barbox"><div class="bar" style="width:${op}%;background:${colorFor(k,P.s)}"></div></div></td></tr>`;
+  }
+  $('tbody').innerHTML=rows;
+  $('explain').innerHTML=explanation(P);
+  $('results').classList.remove('hidden');
+}
+function explanation(P){
+  const nb=2*P.s+1;
+  let t=`The field splits the beam into <b>${nb}</b> discrete beam${nb>1?'s':''} (m = ${Array.from({length:nb},(_,i)=>fmtM(P.s-i)).join(', ')}), not a continuous smear. `;
+  if(P.p===null) t+=`The source is unpolarised, so every outcome is equally likely (1/${nb} each).`;
+  else{
+    const g=Math.acos(P.cosg)*180/Math.PI;
+    if(P.cosg>0.9999) t+=`The spin is already aligned with the ${P.axis}-axis (γ = 0°), so every particle goes into the top beam.`;
+    else if(P.cosg<-0.9999) t+=`The spin is anti-aligned with the ${P.axis}-axis (γ = 180°), so every particle goes into the bottom beam.`;
+    else if(Math.abs(P.cosg)<1e-9&&P.s===0.5) t+=`The spin is perpendicular to the ${P.axis}-axis (γ = 90°), so up and down are each 50% likely: measuring along ${P.axis} gives no information about the earlier direction.`;
+    else t+=`The angle between the spin and the ${P.axis}-axis is γ = ${g.toFixed(1)}°, so p = cos²(γ/2) = ${P.p.toFixed(3)}${P.s===0.5?' for the up beam':', and the outcomes follow a binomial distribution'}.`;
+  }
+  t+=` Differences between predicted and observed counts are random statistical fluctuation, which shrink relative to N as N grows (about 1/√N).`;
+  return t;
+}
+function reset(){
+  stopAnim();current=null;parts=[];dots=[];landed=0;
+  $('run').disabled=false;$('skip').disabled=true;
+  $('results').classList.add('hidden');$('progress').textContent='';$('status').textContent='';
+  idle();
+}
+function idle(){
+  const s=parseFloat($('spin').value);
+  drawScene({s,axis:document.querySelector('input[name=axis]:checked').value});
+}
+
+$('run').onclick=startRun;$('skip').onclick=skip;$('reset').onclick=reset;
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{$('n').value=c.dataset.n});
+$('state').onchange=()=>{const c=$('state').value==='custom';$('custom').classList.toggle('hidden',!c);$('customhint').style.display=c?'block':'none'};
+['spin','classical'].forEach(i=>$(i).addEventListener('change',()=>{if(!running)idle()}));
+document.querySelectorAll('input[name=axis]').forEach(r=>r.addEventListener('change',()=>{if(!running)idle()}));
+idle();
+})();
+</script>
+</body>
+</html>
