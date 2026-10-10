@@ -1,25 +1,25 @@
 # Stern–Gerlach Experiment Simulator
 
-A single-page static website (HTML + CSS + JavaScript, no dependencies, no build step).
+An interactive website that simulates the Stern–Gerlach experiment, a landmark of quantum mechanics.
 
-## Run locally
-Open `index.html` in any browser.
+**Live site:** https://sterngerlach.vercel.app
 
-## Deploy on Vercel
-**Option A: GitHub (recommended)**
-1. Create a GitHub repo and upload `index.html` (and this README).
-2. Go to vercel.com → Add New → Project → import the repo.
-3. Framework preset: **Other**. Leave build command and output directory empty. Click Deploy.
-
-**Option B: CLI**
-```
-npm i -g vercel
-cd stern-gerlach
-vercel --prod
-```
+## What it does
+- Fires a chosen number of atoms (1 to 1,000,000) through a magnetic field.
+- Lets you choose the field axis (x, y or z), the direction of the incoming spin, and the particle's spin (1/2, 1 or 3/2).
+- Animates the atoms splitting into discrete beams and landing on a detector plate.
+- Compares the quantum result with what classical physics would predict.
+- Shows predicted and observed counts for each beam.
+- Includes a short explanation of the physics and the history of the experiment.
 
 ## How the simulation works
-- Inputs: number of particles N, field axis (x/y/z), initial spin state, spin quantum number s.
-- The angle γ between the spin direction and the field axis gives p = cos²(γ/2).
-- Each particle's outcome m is drawn from a binomial distribution over 2s trials (for s = 1/2: up with probability p, down with 1 − p). Unpolarised beams give all 2s+1 outcomes equal probability.
-- Observed counts are compared with the quantum prediction in the results table.
+1. The angle γ between the incoming spin direction and the field axis is found from the inputs.
+2. The probability of the "up" outcome is p = cos²(γ/2).
+3. Each atom's result is drawn at random from that probability. For spin s, the outcomes follow a binomial distribution over 2s trials. A random (unpolarised) beam gives every outcome equal probability.
+4. Observed counts are compared with the predicted counts. The gap shrinks as the number of atoms grows.
+
+## Run it on your computer
+Download this repository and open `index.html` in any browser. No installation is needed.
+
+## Built with
+Plain HTML, CSS and JavaScript (canvas for the graphics). Hosted on Vercel.
